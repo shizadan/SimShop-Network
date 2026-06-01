@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SimShop Network</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --bg: #0c0c14;
+  --surface: #16161f;
+  --surface2: #1e1e2a;
+  --surface3: #262636;
+  --accent: #c6f135;
+  --accent-dim: rgba(198,241,53,0.12);
+  --mtn: #f5c518;
+  --mtn-dim: rgba(245,197,24,0.12);
+  --airtel: #e8203a;
+  --airtel-dim: rgba(232,32,58,0.12);
+  --text: #eeeef5;
+  --muted: #7777aa;
+  --success: #4ade80;
+  --danger: #f87171;
+  --info: #60a5fa;
+  --border: rgba(255,255,255,0.07);
+  --r: 14px;
+  --r-sm: 8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:15px}
+h1,h2,h3,.brand{font-family:'Syne',sans-serif}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+.l-logo{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--accent);margin-bottom:6px;letter-spacing:-1px}
+.l-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+.l-dots{display:flex;gap:6px}
+.l-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:ldot 1.2s ease-in-out infinite}
+.l-dot:nth-child(2){animation-delay:.2s}
+.l-dot:nth-child(3){animation-delay:.4s}
+@keyframes ldot{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh;padding-bottom:72px}
+.screen.active{display:block}
+
+/* LOGIN */
+#login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:radial-gradient(ellipse at 50% -10%,rgba(198,241,53,.1) 0%,transparent 60%)}
+#login-screen.active{display:flex}
+.login-logo{font-size:38px;font-weight:800;color:var(--accent);letter-spacing:-1.5px;margin-bottom:4px}
+.login-tag{font-size:13px;color:var(--muted);margin-bottom:36px}
+.login-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px 24px}
+.login-card h2{font-size:20px;margin-bottom:6px}
+.login-card p{font-size:13px;color:var(--muted);margin-bottom:24px}
+
+/* INPUTS */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field select option{background:var(--surface2)}
+.field textarea{resize:vertical;min-height:80px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:all .2s;width:100%}
+.btn-primary{background:var(--accent);color:#0c0c14}
+.btn-primary:hover{background:#d4f549}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.25)}
+.btn-sm{padding:8px 14px;font-size:13px;width:auto;border-radius:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(12,12,20,.92);backdrop-filter:blur(14px);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;line-height:1.2}
+.topbar-sub{font-size:12px;color:var(--muted)}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;cursor:pointer;border:1.5px solid;transition:transform .15s}
+.avatar:active{transform:scale(.92)}
+.avatar-admin{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.avatar-ceo{background:rgba(251,191,36,.1);border-color:#fbbf24;color:#fbbf24}
+.avatar-manager{background:rgba(74,222,128,.1);border-color:var(--success);color:var(--success)}
+
+/* TAB BAR */
+.tab-bar{display:flex;gap:6px;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none;margin-bottom:2px}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{padding:7px 16px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;font-family:'DM Sans',sans-serif}
+.tab-btn.active{background:var(--accent);color:#0c0c14;border-color:var(--accent);font-weight:700}
+
+/* TAB CONTENT */
+.tab-content{display:none}
+.tab-content.active{display:block}
+.content{padding:14px 16px}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px 13px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:600}
+.stat-value{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;line-height:1}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.stat-card.c-accent{background:var(--accent-dim);border-color:rgba(198,241,53,.2)}
+.stat-card.c-accent .stat-value{color:var(--accent)}
+.stat-card.c-mtn{background:var(--mtn-dim);border-color:rgba(245,197,24,.2)}
+.stat-card.c-mtn .stat-value{color:var(--mtn)}
+.stat-card.c-airtel{background:var(--airtel-dim);border-color:rgba(232,32,58,.2)}
+.stat-card.c-airtel .stat-value{color:var(--airtel)}
+.stat-card.c-success{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.2)}
+.stat-card.c-success .stat-value{color:var(--success)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.card-header{padding:13px 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+.card-body{padding:14px 15px}
+
+/* LIST ITEMS */
+.list-item{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid var(--border);transition:background .15s;cursor:default}
+.list-item:last-child{border-bottom:none}
+.list-item.tappable{cursor:pointer}
+.list-item.tappable:active{background:var(--surface2)}
+.li-left{display:flex;align-items:center;gap:11px}
+.li-icon{width:37px;height:37px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.li-title{font-weight:500;font-size:14px}
+.li-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.li-right{text-align:right;flex-shrink:0}
+.li-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:600}
+.li-label{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-sale{background:rgba(74,222,128,.12);color:var(--success)}
+.b-swap{background:rgba(96,165,250,.12);color:var(--info)}
+.b-free{background:var(--accent-dim);color:var(--accent)}
+.b-failed{background:rgba(248,113,113,.12);color:var(--danger)}
+.b-mtn{background:var(--mtn-dim);color:var(--mtn)}
+.b-airtel{background:var(--airtel-dim);color:var(--airtel)}
+.b-admin{background:rgba(167,139,250,.12);color:#a78bfa}
+.b-ceo{background:rgba(251,191,36,.12);color:#fbbf24}
+.b-manager{background:rgba(74,222,128,.12);color:var(--success)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;display:none;align-items:flex-end;backdrop-filter:blur(5px)}
+.modal-overlay.open{display:flex}
+.modal{width:100%;background:var(--surface);border-radius:var(--r) var(--r) 0 0;padding:18px 20px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto;animation:slideUp .28s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 18px}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:18px}
+
+/* SECTION TITLE */
+.sec{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px}
+
+/* ALERT */
+.alert{padding:11px 13px;border-radius:var(--r-sm);font-size:13px;margin-bottom:14px;display:none}
+.a-err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--danger);display:block}
+.a-ok{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--success);display:block}
+
+/* TYPE SELECTOR */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.type-card{padding:14px 10px;border-radius:var(--r);border:2px solid var(--border);background:var(--surface2);text-align:center;cursor:pointer;transition:all .2s}
+.type-card .t-icon{font-size:22px;margin-bottom:5px}
+.type-card .t-label{font-size:13px;font-weight:600}
+.type-card.sel-sale{border-color:var(--success);background:rgba(74,222,128,.1)}
+.type-card.sel-swap{border-color:var(--info);background:rgba(96,165,250,.1)}
+.type-card.sel-free{border-color:var(--accent);background:var(--accent-dim)}
+.type-card.sel-failed{border-color:var(--danger);background:rgba(248,113,113,.1)}
+
+/* NETWORK SELECTOR */
+.net-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.net-card{padding:13px;border-radius:var(--r-sm);border:2px solid var(--border);background:var(--surface2);text-align:center;cursor:pointer;transition:all .2s;font-weight:700;font-size:14px}
+.net-card.sel-mtn{border-color:var(--mtn);background:var(--mtn-dim);color:var(--mtn)}
+.net-card.sel-airtel{border-color:var(--airtel);background:var(--airtel-dim);color:var(--airtel)}
+
+/* SHOP CARD */
+.shop-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
+.shop-card:active{border-color:var(--accent)}
+.shop-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.shop-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.shop-loc{font-size:12px;color:var(--muted);margin-top:2px}
+.shop-num{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--accent);line-height:1}
+.shop-num-label{font-size:10px;color:var(--muted);text-align:right}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:12px 0}
+
+/* EMPTY */
+.empty{text-align:center;padding:36px 20px;color:var(--muted)}
+.empty-icon{font-size:38px;margin-bottom:10px}
+.empty-text{font-size:14px}
+
+/* BACK BTN */
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--accent);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:14px}
+
+/* PROFILE MENU */
+#profile-menu{position:fixed;top:58px;right:14px;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:6px;min-width:176px;display:none;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+#profile-menu.open{display:block;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.menu-user{padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.menu-user-name{font-weight:600;font-size:14px}
+.menu-user-role{font-size:11px;color:var(--muted);margin-top:2px}
+.menu-item{padding:9px 12px;border-radius:7px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:background .15s}
+.menu-item:hover{background:var(--surface2)}
+.menu-item.m-danger{color:var(--danger)}
+
+/* LOW STOCK BANNER */
+.low-banner{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:var(--r-sm);padding:10px 13px;margin-bottom:12px;font-size:13px;color:var(--danger);display:flex;align-items:center;gap:8px}
+
+/* RANK BADGE */
+.rank{width:26px;height:26px;border-radius:7px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:var(--accent);flex-shrink:0}
+
+/* SETUP BANNER */
+.setup-banner{background:rgba(198,241,53,.08);border:1px solid rgba(198,241,53,.2);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.setup-banner h3{font-family:'Syne',sans-serif;font-size:15px;color:var(--accent);margin-bottom:8px}
+.setup-banner p{font-size:13px;color:var(--muted);line-height:1.6}
+.setup-banner code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--text)}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="l-logo">SimShop</div>
+  <div class="l-sub">Network Management System</div>
+  <div class="l-dots">
+    <div class="l-dot"></div>
+    <div class="l-dot"></div>
+    <div class="l-dot"></div>
+  </div>
+</div>
+
+<!-- PROFILE MENU (shared) -->
+<div id="profile-menu">
+  <div class="menu-user">
+    <div class="menu-user-name" id="pm-name">—</div>
+    <div class="menu-user-role" id="pm-role">—</div>
+  </div>
+  <div class="menu-item m-danger" onclick="doLogout()">⬅ Sign Out</div>
+</div>
+
+<!-- ───────────────────────────
+     LOGIN
+─────────────────────────────-->
+<div id="login-screen" class="screen">
+  <div class="login-logo">SimShop</div>
+  <div class="login-tag">Network Management System</div>
+  <div class="login-card">
+    <h2>Sign In</h2>
+    <p>Enter your credentials to continue</p>
+    <div id="login-err" class="alert"></div>
+    <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Sign In →</button>
+  </div>
+</div>
+
+<!-- ───────────────────────────
+     ADMIN
+─────────────────────────────-->
+<div id="admin-app" class="screen">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">SimShop Admin</div>
+      <div class="topbar-sub" id="admin-greet">Welcome</div>
+    </div>
+    <div class="avatar avatar-admin" id="admin-av" onclick="toggleMenu()">A</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="aTab('dashboard',this)">Dashboard</button>
+    <button class="tab-btn" onclick="aTab('shops',this)">Shops</button>
+    <button class="tab-btn" onclick="aTab('users',this)">Users</button>
+    <button class="tab-btn" onclick="aTab('transactions',this)">Transactions</button>
+    <button class="tab-btn" onclick="aTab('distribution',this)">Distribution</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="a-dashboard" class="tab-content active content">
+    <div id="a-firebase-banner" class="setup-banner" style="display:none">
+      <h3>⚙️ Firebase Setup Required</h3>
+      <p>Replace the <code>firebaseConfig</code> at the bottom of this file with your own Firebase project credentials to activate the app.<br><br>
+      See the setup guide comment at the bottom of the HTML file.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card c-accent"><div class="stat-label">Total Shops</div><div class="stat-value" id="a-total-shops">—</div><div class="stat-sub">Active locations</div></div>
+      <div class="stat-card"><div class="stat-label">Today's Sales</div><div class="stat-value" id="a-today-sales">—</div><div class="stat-sub">All shops</div></div>
+      <div class="stat-card c-mtn"><div class="stat-label">MTN Stock</div><div class="stat-value" id="a-mtn-stock">—</div><div class="stat-sub">Total SIMs</div></div>
+      <div class="stat-card c-airtel"><div class="stat-label">Airtel Stock</div><div class="stat-value" id="a-airtel-stock">—</div><div class="stat-sub">Total SIMs</div></div>
+    </div>
+    <div class="sec">Shop Performance Today</div>
+    <div id="a-perf"></div>
+    <div class="sec" style="margin-top:16px">Recent Transactions</div>
+    <div class="card"><div id="a-recent"></div></div>
+  </div>
+
+  <!-- Shops -->
+  <div id="a-shops" class="tab-content content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="sec" style="margin:0">All Shops</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('m-add-shop')">+ Add Shop</button>
+    </div>
+    <div id="a-shops-list"></div>
+  </div>
+
+  <!-- Users -->
+  <div id="a-users" class="tab-content content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="sec" style="margin:0">All Users</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('m-add-user')">+ Add User</button>
+    </div>
+    <div id="a-users-list"></div>
+  </div>
+
+  <!-- Transactions -->
+  <div id="a-transactions" class="tab-content content">
+    <div class="sec">All Transactions</div>
+    <div class="card"><div id="a-all-txns"></div></div>
+  </div>
+
+  <!-- Distribution -->
+  <div id="a-distribution" class="tab-content content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="sec" style="margin:0">Distribution Log</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('m-dist')">+ Record</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card c-accent"><div class="stat-label">Picked Up Today</div><div class="stat-value" id="d-pickup-today">—</div><div class="stat-sub">From store</div></div>
+      <div class="stat-card"><div class="stat-label">Delivered Today</div><div class="stat-value" id="d-delivered-today">—</div><div class="stat-sub">To managers/retailers</div></div>
+      <div class="stat-card c-mtn"><div class="stat-label">To Managers</div><div class="stat-value" id="d-to-managers">—</div><div class="stat-sub">Internal deliveries</div></div>
+      <div class="stat-card c-success"><div class="stat-label">To Retailers</div><div class="stat-value" id="d-to-retailers">—</div><div class="stat-sub">External deliveries</div></div>
+    </div>
+    <div class="sec">Distribution History</div>
+    <div class="card"><div id="d-history"></div></div>
+  </div>
+</div>
+
+<!-- ───────────────────────────
+     CEO
+─────────────────────────────-->
+<div id="ceo-app" class="screen">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">SimShop CEO</div>
+      <div class="topbar-sub" id="ceo-greet">Network Overview</div>
+    </div>
+    <div class="avatar avatar-ceo" id="ceo-av" onclick="toggleMenu()">C</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="cTab('overview',this)">Overview</button>
+    <button class="tab-btn" onclick="cTab('shops',this)">Shops</button>
+    <button class="tab-btn" onclick="cTab('analytics',this)">Analytics</button>
+  </div>
+
+  <!-- Overview -->
+  <div id="c-overview" class="tab-content active content">
+    <div class="stats-grid">
+      <div class="stat-card c-accent"><div class="stat-label">Total Shops</div><div class="stat-value" id="c-shops">—</div><div class="stat-sub">Locations</div></div>
+      <div class="stat-card"><div class="stat-label">Today's Sales</div><div class="stat-value" id="c-today">—</div><div class="stat-sub">All shops</div></div>
+      <div class="stat-card c-mtn"><div class="stat-label">MTN Stock</div><div class="stat-value" id="c-mtn">—</div><div class="stat-sub">Total SIMs</div></div>
+      <div class="stat-card c-airtel"><div class="stat-label">Airtel Stock</div><div class="stat-value" id="c-airtel">—</div><div class="stat-sub">Total SIMs</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card c-success"><div class="stat-label">Total Revenue</div><div class="stat-value" id="c-revenue" style="font-size:18px">—</div><div class="stat-sub">All time</div></div>
+      <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-value" id="c-staff">—</div><div class="stat-sub">Managers</div></div>
+    </div>
+    <div class="sec">Top Shops Today</div>
+    <div id="c-top-shops"></div>
+    <div class="sec" style="margin-top:16px">Distribution Summary</div>
+    <div class="stats-grid">
+      <div class="stat-card c-accent"><div class="stat-label">Total Distributed</div><div class="stat-value" id="c-dist-total">—</div><div class="stat-sub">All time items</div></div>
+      <div class="stat-card"><div class="stat-label">To Retailers</div><div class="stat-value" id="c-dist-ext">—</div><div class="stat-sub">External deliveries</div></div>
+    </div>
+    <div class="sec" style="margin-top:4px">Recent Distributions</div>
+    <div class="card"><div id="c-dist-recent"></div></div>
+
+    <div class="sec" style="margin-top:16px">Recent Activity</div>
+    <div class="card"><div id="c-activity"></div></div>
+  </div>
+
+  <!-- Shops -->
+  <div id="c-shops" class="tab-content content">
+    <div id="c-shop-detail" style="display:none">
+      <button class="back-btn" onclick="closeCEODetail()">← All Shops</button>
+      <div id="c-shop-detail-body"></div>
+    </div>
+    <div id="c-shops-list-wrap">
+      <div class="sec">All Shops — Tap to View</div>
+      <div id="c-shops-list"></div>
+    </div>
+  </div>
+
+  <!-- Analytics -->
+  <div id="c-analytics" class="tab-content content">
+    <!-- Period Selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:16px">
+      <button class="tab-btn active" id="p-week" onclick="setCEOPeriod('week',this)">Week</button>
+      <button class="tab-btn" id="p-month" onclick="setCEOPeriod('month',this)">Month</button>
+      <button class="tab-btn" id="p-year" onclick="setCEOPeriod('year',this)">Year</button>
+      <button class="tab-btn" id="p-all" onclick="setCEOPeriod('all',this)">All</button>
+    </div>
+    <div id="c-period-label" style="font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center"></div>
+
+    <!-- Revenue Summary -->
+    <div class="stats-grid">
+      <div class="stat-card c-success"><div class="stat-label">Total Revenue</div><div class="stat-value" id="c-p-revenue" style="font-size:18px">—</div></div>
+      <div class="stat-card c-accent"><div class="stat-label">Total Sales</div><div class="stat-value" id="c-p-total">—</div><div class="stat-sub">Transactions</div></div>
+    </div>
+
+    <!-- Network Breakdown -->
+    <div class="sec">Network Performance</div>
+    <div class="stats-grid">
+      <div class="stat-card c-mtn"><div class="stat-label">MTN Sold</div><div class="stat-value" id="c-mtn-sold">—</div><div class="stat-sub">SIMs</div></div>
+      <div class="stat-card c-airtel"><div class="stat-label">Airtel Sold</div><div class="stat-value" id="c-airtel-sold">—</div><div class="stat-sub">SIMs</div></div>
+    </div>
+
+    <!-- Transaction Breakdown -->
+    <div class="sec">Transaction Breakdown</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Sales</div><div class="stat-value" id="c-t-sale">—</div></div>
+      <div class="stat-card"><div class="stat-label">Swaps</div><div class="stat-value" id="c-t-swap">—</div></div>
+      <div class="stat-card"><div class="stat-label">Free SIMs</div><div class="stat-value" id="c-t-free">—</div></div>
+      <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-value" id="c-t-failed">—</div></div>
+    </div>
+
+    <!-- Shop Performance -->
+    <div class="sec">Revenue by Shop</div>
+    <div class="card"><div id="c-rev-by-shop"></div></div>
+
+    <!-- Shop Sales Ranking -->
+    <div class="sec" style="margin-top:4px">Sales Count by Shop</div>
+    <div class="card"><div id="c-sales-by-shop"></div></div>
+
+    <!-- Distribution in period -->
+    <div class="sec" style="margin-top:4px">Distribution Summary</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Pickups</div><div class="stat-value" id="c-p-pickup">—</div><div class="stat-sub">From store</div></div>
+      <div class="stat-card"><div class="stat-label">Deliveries</div><div class="stat-value" id="c-p-dist">—</div><div class="stat-sub">To mgrs & retailers</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────────
+     MANAGER
+─────────────────────────────-->
+<div id="manager-app" class="screen">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="mgr-shop-name">My Shop</div>
+      <div class="topbar-sub" id="mgr-greet">Shop Manager</div>
+    </div>
+    <div class="avatar avatar-manager" id="mgr-av" onclick="toggleMenu()">M</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="mTab('home',this)">Home</button>
+    <button class="tab-btn" onclick="mTab('record',this)">+ Record</button>
+    <button class="tab-btn" onclick="mTab('stock',this)">Stock</button>
+    <button class="tab-btn" onclick="mTab('customers',this)">Customers</button>
+    <button class="tab-btn" onclick="mTab('reports',this)">Reports</button>
+  </div>
+
+  <!-- Home -->
+  <div id="m-home" class="tab-content active content">
+    <div id="m-low-alert"></div>
+    <div class="stats-grid">
+      <div class="stat-card c-accent"><div class="stat-label">Today's Sales</div><div class="stat-value" id="m-today-sales">—</div><div class="stat-sub">Transactions</div></div>
+      <div class="stat-card"><div class="stat-label">SIMs Today</div><div class="stat-value" id="m-today-qty">—</div><div class="stat-sub">Total handled</div></div>
+      <div class="stat-card c-mtn"><div class="stat-label">MTN Stock</div><div class="stat-value" id="m-mtn">—</div><div class="stat-sub">Available</div></div>
+      <div class="stat-card c-airtel"><div class="stat-label">Airtel Stock</div><div class="stat-value" id="m-airtel">—</div><div class="stat-sub">Available</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card c-success"><div class="stat-label">Today Revenue</div><div class="stat-value" id="m-revenue" style="font-size:17px">—</div></div>
+      <div class="stat-card"><div class="stat-label">Swaps Today</div><div class="stat-value" id="m-swaps">—</div></div>
+    </div>
+    <div class="sec">Recent Transactions</div>
+    <div class="card"><div id="m-recent"></div></div>
+  </div>
+
+  <!-- Record -->
+  <div id="m-record" class="tab-content content">
+    <div class="sec">Transaction Type</div>
+    <div id="r-success" class="alert"></div>
+    <div id="r-error" class="alert"></div>
+    <div class="type-grid">
+      <div class="type-card" onclick="selType('sale',this)"><div class="t-icon">💰</div><div class="t-label">Sale</div></div>
+      <div class="type-card" onclick="selType('swap',this)"><div class="t-icon">🔄</div><div class="t-label">SIM Swap</div></div>
+      <div class="type-card" onclick="selType('free',this)"><div class="t-icon">🎁</div><div class="t-label">Free SIM</div></div>
+      <div class="type-card" onclick="selType('failed',this)"><div class="t-icon">❌</div><div class="t-label">Failed/Invalid</div></div>
+    </div>
+    <div class="sec">Network</div>
+    <div class="net-grid">
+      <div class="net-card" onclick="selNet('MTN',this)">📶 MTN</div>
+      <div class="net-card" onclick="selNet('Airtel',this)">📡 Airtel</div>
+    </div>
+    <div class="field"><label>Customer Name *</label><input type="text" id="r-cname" placeholder="Enter customer name"></div>
+    <div class="field"><label>Customer Phone</label><input type="tel" id="r-cphone" placeholder="080X XXX XXXX"></div>
+    <div class="field"><label>Quantity</label><input type="number" id="r-qty" value="1" min="1"></div>
+    <div class="field" id="r-amount-wrap"><label>Amount (₦)</label><input type="number" id="r-amount" placeholder="0"></div>
+    <div class="field"><label>Notes (optional)</label><textarea id="r-notes" placeholder="Any additional notes..."></textarea></div>
+    <button class="btn btn-primary" onclick="submitTxn()">✓ Record Transaction</button>
+  </div>
+
+  <!-- Stock -->
+  <div id="m-stock" class="tab-content content">
+    <div class="sec">Stock Management</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <div class="card-title">📶 MTN Stock</div>
+        <span class="badge b-mtn" id="m-mtn-badge">—</span>
+      </div>
+      <div class="card-body">
+        <div class="field"><label>Set New Quantity</label><input type="number" id="s-mtn" placeholder="Enter quantity"></div>
+        <button class="btn btn-secondary" onclick="setStock('MTN')">Update MTN Stock</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📡 Airtel Stock</div>
+        <span class="badge b-airtel" id="m-airtel-badge">—</span>
+      </div>
+      <div class="card-body">
+        <div class="field"><label>Set New Quantity</label><input type="number" id="s-airtel" placeholder="Enter quantity"></div>
+        <button class="btn btn-secondary" onclick="setStock('Airtel')">Update Airtel Stock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customers -->
+  <div id="m-customers" class="tab-content content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="sec" style="margin:0">Customers</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('m-add-cust')">+ Add</button>
+    </div>
+    <div class="field"><input type="text" id="cust-search" placeholder="🔍 Search name or phone..." oninput="searchCusts()"></div>
+    <div class="card"><div id="m-cust-list"></div></div>
+  </div>
+
+  <!-- Reports -->
+  <div id="m-reports" class="tab-content content">
+    <div class="sec">My Shop Report</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-body">
+        <div class="field"><label>From Date</label><input type="date" id="rep-from"></div>
+        <div class="field"><label>To Date</label><input type="date" id="rep-to"></div>
+        <button class="btn btn-primary" onclick="genReport()">Generate Report</button>
+      </div>
+    </div>
+    <div id="rep-out"></div>
+  </div>
+</div>
+
+<!-- ───────────────────────────
+     MODALS
+─────────────────────────────-->
+
+<!-- Add Shop -->
+<div class="modal-overlay" id="m-add-shop" onclick="overlayClose(event,'m-add-shop')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add New Shop</div>
+    <div id="m-shop-err" class="alert"></div>
+    <div class="field"><label>Shop Name *</label><input type="text" id="ms-name" placeholder="e.g. Dan's Shop Wuse"></div>
+    <div class="field"><label>Location</label><input type="text" id="ms-loc" placeholder="e.g. Wuse, Abuja"></div>
+    <div class="field"><label>Assign Manager</label><select id="ms-mgr"><option value="">— No Manager Yet —</option></select></div>
+    <button class="btn btn-primary" onclick="addShop()" style="margin-top:4px">Create Shop</button>
+  </div>
+</div>
+
+<!-- Add User -->
+<div class="modal-overlay" id="m-add-user" onclick="overlayClose(event,'m-add-user')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add New User</div>
+    <div id="m-user-err" class="alert"></div>
+    <div class="field"><label>Full Name *</label><input type="text" id="mu-name" placeholder="e.g. Amaka Johnson"></div>
+    <div class="field"><label>Email *</label><input type="email" id="mu-email" placeholder="amaka@example.com"></div>
+    <div class="field"><label>Password *</label><input type="password" id="mu-pass" placeholder="Min. 6 characters"></div>
+    <div class="field"><label>Role *</label>
+      <select id="mu-role" onchange="roleToggle()">
+        <option value="manager">Manager</option>
+        <option value="ceo">CEO</option>
+      </select>
+    </div>
+    <div class="field" id="mu-shop-wrap">
+      <label>Assign to Shop</label>
+      <select id="mu-shop"><option value="">— Select Shop —</option></select>
+    </div>
+    <button class="btn btn-primary" onclick="addUser()" style="margin-top:4px">Create User</button>
+  </div>
+</div>
+
+<!-- Add Customer -->
+<div class="modal-overlay" id="m-add-cust" onclick="overlayClose(event,'m-add-cust')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Customer</div>
+    <div class="field"><label>Full Name *</label><input type="text" id="c-name" placeholder="Customer name"></div>
+    <div class="field"><label>Phone Number</label><input type="tel" id="c-phone" placeholder="080X XXX XXXX"></div>
+    <div class="field"><label>Notes</label><textarea id="c-notes" placeholder="Optional notes..."></textarea></div>
+    <button class="btn btn-primary" onclick="addCust()">Add Customer</button>
+  </div>
+</div>
+
+
+<!-- Distribution Modal -->
+<div class="modal-overlay" id="m-dist" onclick="overlayClose(event,'m-dist')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Record Distribution</div>
+    <div id="m-dist-err" class="alert"></div>
+    <div id="m-dist-ok" class="alert"></div>
+
+    <div class="sec" style="font-size:11px">Action Type</div>
+    <div class="type-grid" style="margin-bottom:14px">
+      <div class="type-card" onclick="selDistType('pickup',this)"><div class="t-icon">📦</div><div class="t-label">Stock Pickup</div></div>
+      <div class="type-card" onclick="selDistType('internal',this)"><div class="t-icon">🏪</div><div class="t-label">To Manager</div></div>
+      <div class="type-card" onclick="selDistType('external',this)"><div class="t-icon">🤝</div><div class="t-label">To Retailer</div></div>
+    </div>
+
+    <div class="sec" style="font-size:11px">Product Type</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="net-card" onclick="selDistProduct('SIM',this)" style="font-size:13px">📶 SIM</div>
+      <div class="net-card" onclick="selDistProduct('MiFi',this)" style="font-size:13px">📡 MiFi</div>
+      <div class="net-card" onclick="selDistProduct('Router',this)" style="font-size:13px">📻 Router</div>
+    </div>
+
+    <div class="sec" style="font-size:11px">Network</div>
+    <div class="net-grid" style="margin-bottom:14px">
+      <div class="net-card" onclick="selDistNet('MTN',this)">📶 MTN</div>
+      <div class="net-card" onclick="selDistNet('Airtel',this)">📡 Airtel</div>
+    </div>
+
+    <div class="field"><label>Quantity *</label><input type="number" id="dist-qty" placeholder="e.g. 50" min="1"></div>
+
+    <div id="dist-internal-wrap" style="display:none">
+      <div class="field"><label>Select Manager</label>
+        <select id="dist-manager"><option value="">— Select Manager —</option></select>
+      </div>
+    </div>
+
+    <div id="dist-external-wrap" style="display:none">
+      <div class="field"><label>Retailer Name *</label><input type="text" id="dist-retailer-name" placeholder="Retailer or business name"></div>
+      <div class="field"><label>Retailer Phone</label><input type="tel" id="dist-retailer-phone" placeholder="080X XXX XXXX"></div>
+    </div>
+
+    <div id="dist-pickup-wrap" style="display:none">
+      <div class="field"><label>Store / Source</label><input type="text" id="dist-source" placeholder="e.g. MTN Warehouse, Abuja"></div>
+    </div>
+
+    <div class="field"><label>Notes (optional)</label><textarea id="dist-notes" placeholder="Any additional notes..."></textarea></div>
+    <button class="btn btn-primary" onclick="submitDist()">✓ Record Distribution</button>
+  </div>
+</div>
+
+<!-- Edit Shop -->
+<div class="modal-overlay" id="m-edit-shop" onclick="overlayClose(event,'m-edit-shop')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Shop</div>
+    <div id="m-edit-shop-err" class="alert"></div>
+    <input type="hidden" id="edit-shop-id">
+    <div class="field"><label>Shop Name *</label><input type="text" id="edit-shop-name" placeholder="Shop name"></div>
+    <div class="field"><label>Location</label><input type="text" id="edit-shop-loc" placeholder="e.g. Wuse, Abuja"></div>
+    <div class="field"><label>Assign Manager</label><select id="edit-shop-mgr"><option value="">No Manager</option></select></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" onclick="saveShopEdit()">Save Changes</button>
+      <button class="btn btn-danger" style="width:auto;padding:13px 16px" onclick="deleteShop()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User -->
+<div class="modal-overlay" id="m-edit-user" onclick="overlayClose(event,'m-edit-user')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit User</div>
+    <div id="m-edit-user-err" class="alert"></div>
+    <input type="hidden" id="edit-user-id">
+    <div class="field"><label>Full Name *</label><input type="text" id="edit-user-name" placeholder="Full name"></div>
+    <div class="field"><label>Role</label>
+      <select id="edit-user-role" onchange="editRoleToggle()">
+        <option value="manager">Manager</option>
+        <option value="ceo">CEO</option>
+      </select>
+    </div>
+    <div class="field" id="edit-user-shop-wrap">
+      <label>Assigned Shop</label>
+      <select id="edit-user-shop"><option value="">Select Shop</option></select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" onclick="saveUserEdit()">Save Changes</button>
+      <button class="btn btn-danger" style="width:auto;padding:13px 16px" onclick="deleteUser()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     FIREBASE CONFIG + APP LOGIC
+     ─────────────────────────────────────────
+     SETUP INSTRUCTIONS:
+     1. Go to https://console.firebase.google.com
+     2. Create a new project (e.g. "simshop-network")
+     3. Enable Authentication → Email/Password
+     4. Enable Firestore Database (start in test mode)
+     5. Go to Project Settings → Your Apps → Add Web App
+     6. Copy the firebaseConfig values and paste below
+     7. Create your admin account:
+        - In Firebase Auth, add a user with your email
+        - In Firestore, create collection "users",
+          document ID = your Firebase Auth UID, with fields:
+          { name: "Dan", email: "your@email.com", role: "admin" }
+     8. Save and open the file — done!
+═══════════════════════════════════════════ -->
+<script>
+// ─── FIREBASE CONFIG ───
+const firebaseConfig = {
+  apiKey: "AIzaSyClOrWs4FlK8ANnAfh0ToRjL-vMjpXkLcQ",
+  authDomain: "simshop-network-5dc7e.firebaseapp.com",
+  projectId: "simshop-network-5dc7e",
+  storageBucket: "simshop-network-5dc7e.firebasestorage.app",
+  messagingSenderId: "1043670334965",
+  appId: "1:1043670334965:web:9d17b793cdcdb0558a74bc",
+  measurementId: "G-4H71D8H136"
+};
+// ───────────────────────────────────────────────
+
+let app, auth, db;
+const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+if (isConfigured) {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  db.enablePersistence().catch(() => {});
+}
+
+// ─── STATE ───
+let CU = null; // currentUser (Firebase)
+let UD = null; // userData (Firestore)
+let selTxnType = null;
+let selTxnNet = null;
+
+// ─── BOOT ───
+window.addEventListener('load', () => {
+  if (!isConfigured) {
+    document.getElementById('loading').style.display = 'none';
+    // Show login with setup banner
+    showScreen('login-screen');
+    document.getElementById('a-firebase-banner').style.display = 'block';
+    // Show demo login for preview
+    showDemoMode();
+    return;
+  }
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      CU = user;
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          UD = doc.data();
+          routeUser();
+        } else {
+          err('login-err', 'No user profile found. Contact your admin.');
+          await auth.signOut();
+          showScreen('login-screen');
+        }
+      } catch(e) {
+        err('login-err', 'Connection error. Check internet.');
+        showScreen('login-screen');
+      }
+    } else {
+      showScreen('login-screen');
+    }
+    document.getElementById('loading').style.display = 'none';
+  });
+});
+
+function showDemoMode() {
+  const lc = document.querySelector('.login-card');
+  lc.innerHTML = `
+    <h2>⚙️ Setup Required</h2>
+    <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">
+      To activate SimShop Network, replace the <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px">firebaseConfig</code>
+      in this HTML file with your Firebase project credentials.<br><br>
+      See the setup instructions in the comments near the bottom of the file.
+    </p>
+    <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;font-size:13px;line-height:1.8;color:var(--muted)">
+      1. Go to <strong style="color:var(--text)">console.firebase.google.com</strong><br>
+      2. Create project → Enable Auth + Firestore<br>
+      3. Copy your config values into this file<br>
+      4. Create your admin account in Firebase<br>
+      5. Open the file and sign in
+    </div>
+  `;
+}
+
+function routeUser() {
+  const role = UD.role;
+  const init = (UD.name || 'U').charAt(0).toUpperCase();
+  const greet = greeting() + ', ' + (UD.name||'').split(' ')[0] + '!';
+  setPM(UD.name || '—', role);
+
+  if (role === 'admin') {
+    document.getElementById('admin-av').textContent = init;
+    document.getElementById('admin-greet').textContent = greet;
+    showScreen('admin-app');
+    loadAdminDash();
+  } else if (role === 'ceo') {
+    document.getElementById('ceo-av').textContent = init;
+    document.getElementById('ceo-greet').textContent = greet;
+    showScreen('ceo-app');
+    loadCEOOverview();
+  } else if (role === 'manager') {
+    document.getElementById('mgr-av').textContent = init;
+    document.getElementById('mgr-greet').textContent = UD.name || 'Manager';
+    document.getElementById('mgr-shop-name').textContent = UD.shopName || 'My Shop';
+    showScreen('manager-app');
+    loadMgrHome();
+  }
+}
+
+// ─── AUTH ───
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const btn = document.getElementById('login-btn');
+  if (!email || !pass) { err('login-err', 'Enter your email and password.'); return; }
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    err('login-err', 'Wrong email or password.');
+    btn.textContent = 'Sign In →'; btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  closeMenu();
+  await auth.signOut();
+  CU = null; UD = null;
+  showScreen('login-screen');
+}
+
+// ─── UI ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setPM(name, role) {
+  document.getElementById('pm-name').textContent = name;
+  document.getElementById('pm-role').textContent = role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function toggleMenu() { document.getElementById('profile-menu').classList.toggle('open'); }
+function closeMenu() { document.getElementById('profile-menu').classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (!e.target.closest('#profile-menu') && !e.target.closest('.avatar')) closeMenu();
+});
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'm-add-shop' || id === 'm-add-user') fillSelects();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function overlayClose(e, id) { if (e.target.classList.contains('modal-overlay')) closeModal(id); }
+
+function err(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = 'alert a-err';
+}
+function ok(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = 'alert a-ok';
+  setTimeout(() => { el.className = 'alert'; }, 3500);
+}
+function clearAlert(id) { document.getElementById(id).className = 'alert'; }
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+}
+
+function txnIcon(type) { return {sale:'💰',swap:'🔄',free:'🎁',failed:'❌'}[type] || '📋'; }
+function txnBadge(t) { return `<span class="badge b-${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</span>`; }
+function netBadge(n) { return `<span class="badge b-${n==='MTN'?'mtn':'airtel'}">${n}</span>`; }
+
+function txnRow(d) {
+  return `<div class="list-item">
+    <div class="li-left">
+      <div class="li-icon" style="background:var(--surface2)">${txnIcon(d.type)}</div>
+      <div>
+        <div class="li-title">${d.customerName||'Customer'}</div>
+        <div class="li-sub">${d.shopName||''} · ${fmtTime(d.createdAt)||d.date||''}</div>
+      </div>
+    </div>
+    <div class="li-right">
+      <div style="display:flex;gap:4px;justify-content:flex-end;margin-bottom:3px">${txnBadge(d.type)} ${netBadge(d.network)}</div>
+      <div class="li-label">Qty: ${d.quantity||1}${d.amount>0?` · ₦${Number(d.amount).toLocaleString()}`:''}</div>
+    </div>
+  </div>`;
+}
+
+function renderTxns(elId, snap) {
+  const el = document.getElementById(elId);
+  if (!snap || snap.empty || !snap.docs.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No transactions yet</div></div>';
+    return;
+  }
+  el.innerHTML = snap.docs.map(doc => txnRow(doc.data())).join('');
+}
+
+// ─── TAB SWITCHERS ───
+function aTab(tab, btn) {
+  document.querySelectorAll('#admin-app .tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#admin-app .tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('a-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab==='shops') loadAdminShops();
+  if (tab==='users') loadAdminUsers();
+  if (tab==='transactions') loadAdminTxns();
+  if (tab==='distribution') loadDistribution();
+}
+
+function cTab(tab, btn) {
+  document.querySelectorAll('#ceo-app .tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#ceo-app .tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('c-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab==='shops') loadCEOShops();
+  if (tab==='analytics') loadCEOAnalytics();
+}
+
+function mTab(tab, btn) {
+  document.querySelectorAll('#manager-app .tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#manager-app .tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('m-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab==='home') loadMgrHome();
+  if (tab==='stock') loadMgrStock();
+  if (tab==='customers') loadMgrCusts();
+  if (tab==='reports') initReportDates();
+}
+
+// ═══════════════════
+// ADMIN LOGIC
+// ═══════════════════
+async function loadAdminDash() {
+  const [shopsSnap, stockSnap, todaySnap, recentSnap] = await Promise.all([
+    db.collection('shops').get(),
+    db.collection('stock').get(),
+    db.collection('transactions').where('date','==',today()).get(),
+    db.collection('transactions').orderBy('createdAt','desc').limit(10).get()
+  ]);
+
+  document.getElementById('a-total-shops').textContent = shopsSnap.size;
+  document.getElementById('a-today-sales').textContent = todaySnap.size;
+
+  let mtn=0, airtel=0;
+  stockSnap.forEach(d => {
+    const s=d.data();
+    if(s.network==='MTN') mtn+=s.quantity||0;
+    else airtel+=s.quantity||0;
+  });
+  document.getElementById('a-mtn-stock').textContent = mtn;
+  document.getElementById('a-airtel-stock').textContent = airtel;
+
+  // Shop performance
+  const shopMap = {};
+  shopsSnap.forEach(d => shopMap[d.id] = {...d.data(), id:d.id, cnt:0, rev:0});
+  todaySnap.forEach(d => {
+    const s=d.data();
+    if(shopMap[s.shopId]) { shopMap[s.shopId].cnt++; shopMap[s.shopId].rev+=Number(s.amount||0); }
+  });
+  const sorted = Object.values(shopMap).sort((a,b)=>b.cnt-a.cnt);
+  document.getElementById('a-perf').innerHTML = sorted.length ? sorted.map((s,i) => `
+    <div class="shop-card" style="cursor:default">
+      <div class="shop-card-top">
+        <div>
+          <div class="shop-name">${s.name}</div>
+          <div class="shop-loc">📍 ${s.location||'—'} · ${s.managerName||'No manager'}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="shop-num">${s.cnt}</div>
+          <div class="shop-num-label">sales today</div>
+        </div>
+      </div>
+      ${s.rev>0?`<div style="font-size:13px;color:var(--success)">₦${s.rev.toLocaleString()} revenue today</div>`:''}
+    </div>
+  `).join('') : '<div class="empty"><div class="empty-icon">🏪</div><div class="empty-text">No shops yet. Add your first shop!</div></div>';
+
+  renderTxns('a-recent', recentSnap);
+}
+
+async function loadAdminShops() {
+  const snap = await db.collection('shops').get();
+  const el = document.getElementById('a-shops-list');
+  if (snap.empty) { el.innerHTML='<div class="empty"><div class="empty-icon">🏪</div><div class="empty-text">No shops yet</div></div>'; return; }
+  el.innerHTML = snap.docs.map(doc => {
+    const d=doc.data();
+    return `<div class="shop-card" style="cursor:default">
+      <div class="shop-card-top">
+        <div><div class="shop-name">${d.name}</div><div class="shop-loc">📍 ${d.location||'—'}</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="openEditShop('${doc.id}','${d.name.replace(/'/g,"\'")}','${(d.location||'').replace(/'/g,"\'")}','${d.managerId||''}')">Edit</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">👤 ${d.managerName||'Unassigned'}</div>
+    </div>`;
+  }).join('');
+}
+
+async function openEditShop(id, name, loc, mgrId) {
+  document.getElementById('edit-shop-id').value = id;
+  document.getElementById('edit-shop-name').value = name;
+  document.getElementById('edit-shop-loc').value = loc;
+  // populate manager select
+  const usersSnap = await db.collection('users').where('role','==','manager').get();
+  const sel = document.getElementById('edit-shop-mgr');
+  sel.innerHTML = '<option value="">No Manager</option>';
+  usersSnap.forEach(d => {
+    sel.innerHTML += `<option value="${d.id}" ${d.id===mgrId?'selected':''}>${d.data().name}</option>`;
+  });
+  openModal('m-edit-shop');
+}
+
+async function saveShopEdit() {
+  const id = document.getElementById('edit-shop-id').value;
+  const name = document.getElementById('edit-shop-name').value.trim();
+  const loc = document.getElementById('edit-shop-loc').value.trim();
+  const mgrId = document.getElementById('edit-shop-mgr').value;
+  if (!name) { err('m-edit-shop-err','Shop name is required.'); return; }
+  let mgrName = '';
+  if (mgrId) {
+    const ud = await db.collection('users').doc(mgrId).get();
+    if (ud.exists) mgrName = ud.data().name;
+  }
+  await db.collection('shops').doc(id).update({ name, location: loc, managerId: mgrId||'', managerName: mgrName });
+  if (mgrId) await db.collection('users').doc(mgrId).update({ shopId: id, shopName: name });
+  closeModal('m-edit-shop');
+  loadAdminShops(); loadAdminDash();
+}
+
+async function deleteShop() {
+  const id = document.getElementById('edit-shop-id').value;
+  if (!confirm('Delete this shop? This cannot be undone.')) return;
+  await db.collection('shops').doc(id).delete();
+  await db.collection('stock').doc(id+'_MTN').delete();
+  await db.collection('stock').doc(id+'_Airtel').delete();
+  closeModal('m-edit-shop');
+  loadAdminShops(); loadAdminDash();
+}
+
+async function loadAdminUsers() {
+  const snap = await db.collection('users').get();
+  const el = document.getElementById('a-users-list');
+  if (snap.empty) { el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No users yet</div></div>'; return; }
+  el.innerHTML = `<div class="card">${snap.docs.map(doc=>{
+    const d=doc.data();
+    return `<div class="list-item tappable" onclick="openEditUser('${doc.id}','${(d.name||'').replace(/'/g,"\'")}','${d.role}','${d.shopId||''}')">
+      <div class="li-left">
+        <div class="li-icon" style="background:var(--surface2);font-size:14px;font-family:'Syne',sans-serif;font-weight:700;color:var(--muted)">${(d.name||'U').charAt(0)}</div>
+        <div>
+          <div class="li-title">${d.name||'—'}</div>
+          <div class="li-sub">${d.email||'—'}${d.shopName?' · '+d.shopName:''}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="badge b-${d.role}">${d.role}</span><span style="color:var(--muted);font-size:18px">›</span></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function openEditUser(id, name, role, shopId) {
+  document.getElementById('edit-user-id').value = id;
+  document.getElementById('edit-user-name').value = name;
+  document.getElementById('edit-user-role').value = role;
+  document.getElementById('edit-user-shop-wrap').style.display = role==='manager' ? 'block' : 'none';
+  const shopsSnap = await db.collection('shops').get();
+  const sel = document.getElementById('edit-user-shop');
+  sel.innerHTML = '<option value="">Select Shop</option>';
+  shopsSnap.forEach(d => {
+    sel.innerHTML += `<option value="${d.id}" ${d.id===shopId?'selected':''}>${d.data().name}</option>`;
+  });
+  openModal('m-edit-user');
+}
+
+async function saveUserEdit() {
+  const id = document.getElementById('edit-user-id').value;
+  const name = document.getElementById('edit-user-name').value.trim();
+  const role = document.getElementById('edit-user-role').value;
+  const shopId = document.getElementById('edit-user-shop').value;
+  if (!name) { err('m-edit-user-err','Name is required.'); return; }
+  let shopName = '';
+  if (shopId) {
+    const sd = await db.collection('shops').doc(shopId).get();
+    if (sd.exists) shopName = sd.data().name;
+  }
+  await db.collection('users').doc(id).update({ name, role, shopId: shopId||'', shopName });
+  if (shopId && role==='manager') {
+    await db.collection('shops').doc(shopId).update({ managerId: id, managerName: name });
+  }
+  closeModal('m-edit-user');
+  loadAdminUsers();
+}
+
+async function deleteUser() {
+  const id = document.getElementById('edit-user-id').value;
+  if (!confirm('Remove this user? They will lose access.')) return;
+  await db.collection('users').doc(id).delete();
+  closeModal('m-edit-user');
+  loadAdminUsers();
+}
+
+function editRoleToggle() {
+  const r = document.getElementById('edit-user-role').value;
+  document.getElementById('edit-user-shop-wrap').style.display = r==='manager' ? 'block' : 'none';
+}
+
+async function loadAdminTxns() {
+  const snap = await db.collection('transactions').orderBy('createdAt','desc').limit(50).get();
+  renderTxns('a-all-txns', snap);
+}
+
+async function addShop() {
+  const name = document.getElementById('ms-name').value.trim();
+  const loc = document.getElementById('ms-loc').value.trim();
+  const mgrId = document.getElementById('ms-mgr').value;
+  if (!name) { err('m-shop-err','Shop name is required.'); return; }
+
+  let mgrName = '';
+  if (mgrId) {
+    const ud = await db.collection('users').doc(mgrId).get();
+    if (ud.exists) mgrName = ud.data().name;
+  }
+
+  const ref = await db.collection('shops').add({
+    name, location: loc, managerId: mgrId||'', managerName: mgrName,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // Init stock
+  await Promise.all([
+    db.collection('stock').doc(ref.id+'_MTN').set({ shopId:ref.id, shopName:name, network:'MTN', quantity:0, lowStockThreshold:10, lastUpdated:firebase.firestore.FieldValue.serverTimestamp() }),
+    db.collection('stock').doc(ref.id+'_Airtel').set({ shopId:ref.id, shopName:name, network:'Airtel', quantity:0, lowStockThreshold:10, lastUpdated:firebase.firestore.FieldValue.serverTimestamp() })
+  ]);
+
+  if (mgrId) await db.collection('users').doc(mgrId).update({ shopId:ref.id, shopName:name });
+
+  closeModal('m-add-shop');
+  document.getElementById('ms-name').value = '';
+  document.getElementById('ms-loc').value = '';
+  loadAdminShops(); loadAdminDash();
+}
+
+async function addUser() {
+  const name = document.getElementById('mu-name').value.trim();
+  const email = document.getElementById('mu-email').value.trim();
+  const pass = document.getElementById('mu-pass').value;
+  const role = document.getElementById('mu-role').value;
+  const shopId = document.getElementById('mu-shop').value;
+
+  if (!name||!email||!pass) { err('m-user-err','All fields are required.'); return; }
+  if (pass.length<6) { err('m-user-err','Password must be at least 6 characters.'); return; }
+
+  try {
+    // Use secondary app to avoid signing out admin
+    let secondApp;
+    try { secondApp = firebase.app('secondary'); } catch(e) { secondApp = firebase.initializeApp(firebaseConfig,'secondary'); }
+    const secAuth = secondApp.auth();
+    const cred = await secAuth.createUserWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+    await secAuth.signOut();
+
+    let shopName = '';
+    if (shopId) {
+      const sd = await db.collection('shops').doc(shopId).get();
+      if (sd.exists) shopName = sd.data().name;
+    }
+
+    await db.collection('users').doc(uid).set({
+      name, email, role, shopId:shopId||'', shopName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    if (shopId && role==='manager') {
+      await db.collection('shops').doc(shopId).update({ managerId:uid, managerName:name });
+    }
+
+    closeModal('m-add-user');
+    ['mu-name','mu-email','mu-pass'].forEach(id => document.getElementById(id).value='');
+    loadAdminUsers();
+  } catch(e) {
+    err('m-user-err', e.message||'Failed to create user.');
+  }
+}
+
+function roleToggle() {
+  const r = document.getElementById('mu-role').value;
+  document.getElementById('mu-shop-wrap').style.display = r==='manager' ? 'block' : 'none';
+}
+
+async function fillSelects() {
+  const [shopsSnap, usersSnap] = await Promise.all([
+    db.collection('shops').get(),
+    db.collection('users').where('role','==','manager').get()
+  ]);
+
+  // shop-manager-select
+  const mgrSel = document.getElementById('ms-mgr');
+  mgrSel.innerHTML = '<option value="">— No Manager Yet —</option>';
+  usersSnap.forEach(d => { mgrSel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`; });
+
+  // user-shop-select
+  const shopSel = document.getElementById('mu-shop');
+  shopSel.innerHTML = '<option value="">— Select Shop —</option>';
+  shopsSnap.forEach(d => { shopSel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`; });
+}
+
+// ═══════════════════
+// CEO LOGIC
+// ═══════════════════
+async function loadCEOOverview() {
+  const [shopsSnap, stockSnap, todaySnap, recentSnap, usersSnap, allTxnsSnap] = await Promise.all([
+    db.collection('shops').get(),
+    db.collection('stock').get(),
+    db.collection('transactions').where('date','==',today()).get(),
+    db.collection('transactions').orderBy('createdAt','desc').limit(8).get(),
+    db.collection('users').where('role','==','manager').get(),
+    db.collection('transactions').get()
+  ]);
+
+  document.getElementById('c-shops').textContent = shopsSnap.size;
+  document.getElementById('c-today').textContent = todaySnap.size;
+  document.getElementById('c-staff').textContent = usersSnap.size;
+
+  let mtn=0, airtel=0;
+  stockSnap.forEach(d => { const s=d.data(); if(s.network==='MTN') mtn+=s.quantity||0; else airtel+=s.quantity||0; });
+  document.getElementById('c-mtn').textContent = mtn;
+  document.getElementById('c-airtel').textContent = airtel;
+
+  let totalRev = 0;
+  allTxnsSnap.forEach(d => { totalRev += Number(d.data().amount||0); });
+  document.getElementById('c-revenue').textContent = '₦'+totalRev.toLocaleString();
+
+  // Top shops
+  const shopMap = {};
+  shopsSnap.forEach(d => shopMap[d.id] = {...d.data(), id:d.id, cnt:0});
+  todaySnap.forEach(d => { const s=d.data(); if(shopMap[s.shopId]) shopMap[s.shopId].cnt++; });
+  const sorted = Object.values(shopMap).sort((a,b)=>b.cnt-a.cnt);
+
+  document.getElementById('c-top-shops').innerHTML = sorted.length ? sorted.map((s,i) => `
+    <div class="list-item" style="background:var(--surface);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border)">
+      <div class="li-left">
+        <div class="rank">${i+1}</div>
+        <div><div class="li-title">${s.name}</div><div class="li-sub">${s.location||'—'} · ${s.managerName||'No manager'}</div></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--accent)">${s.cnt}</div>
+        <div style="font-size:10px;color:var(--muted)">today</div>
+      </div>
+    </div>
+  `).join('') : '<div class="empty"><div class="empty-text">No activity today</div></div>';
+
+  renderTxns('c-activity', recentSnap);
+}
+
+async function loadCEOShops() {
+  const [shopsSnap, todaySnap] = await Promise.all([
+    db.collection('shops').get(),
+    db.collection('transactions').where('date','==',today()).get()
+  ]);
+
+  const shopSales = {};
+  todaySnap.forEach(d => { const id=d.data().shopId; shopSales[id]=(shopSales[id]||0)+1; });
+
+  const el = document.getElementById('c-shops-list');
+  if (shopsSnap.empty) { el.innerHTML='<div class="empty"><div class="empty-icon">🏪</div><div class="empty-text">No shops available</div></div>'; return; }
+  el.innerHTML = shopsSnap.docs.map(doc => {
+    const d=doc.data();
+    return `<div class="shop-card" onclick="openCEODetail('${doc.id}')">
+      <div class="shop-card-top">
+        <div><div class="shop-name">${d.name}</div><div class="shop-loc">📍 ${d.location||'—'} · ${d.managerName||'No manager'}</div></div>
+        <div style="text-align:right"><div class="shop-num">${shopSales[doc.id]||0}</div><div class="shop-num-label">today</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--accent);margin-top:6px">Tap to view details →</div>
+    </div>`;
+  }).join('');
+}
+
+async function openCEODetail(shopId) {
+  document.getElementById('c-shops-list-wrap').style.display = 'none';
+  document.getElementById('c-shop-detail').style.display = 'block';
+
+  const [shopDoc, mtnDoc, airtelDoc, txnsSnap] = await Promise.all([
+    db.collection('shops').doc(shopId).get(),
+    db.collection('stock').doc(shopId+'_MTN').get(),
+    db.collection('stock').doc(shopId+'_Airtel').get(),
+    db.collection('transactions').where('shopId','==',shopId).orderBy('createdAt','desc').limit(20).get()
+  ]);
+
+  const s = shopDoc.data();
+  const mtnQ = mtnDoc.exists ? mtnDoc.data().quantity : 0;
+  const airtelQ = airtelDoc.exists ? airtelDoc.data().quantity : 0;
+
+  let rev=0, sale=0, swap=0, free=0, failed=0;
+  txnsSnap.forEach(d => {
+    const t=d.data();
+    rev+=Number(t.amount||0);
+    if(t.type==='sale') sale++;
+    if(t.type==='swap') swap++;
+    if(t.type==='free') free++;
+    if(t.type==='failed') failed++;
+  });
+
+  document.getElementById('c-shop-detail-body').innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header"><div class="card-title">${s.name}</div></div>
+      <div class="card-body" style="font-size:13px;color:var(--muted)">
+        📍 ${s.location||'—'} &nbsp;|&nbsp; 👤 ${s.managerName||'No manager'}
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card c-mtn"><div class="stat-label">MTN Stock</div><div class="stat-value">${mtnQ}</div></div>
+      <div class="stat-card c-airtel"><div class="stat-label">Airtel Stock</div><div class="stat-value">${airtelQ}</div></div>
+      <div class="stat-card c-success"><div class="stat-label">Total Revenue</div><div class="stat-value" style="font-size:18px">₦${rev.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Txns</div><div class="stat-value">${txnsSnap.size}</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Sales</div><div class="stat-value">${sale}</div></div>
+      <div class="stat-card"><div class="stat-label">Swaps</div><div class="stat-value">${swap}</div></div>
+      <div class="stat-card"><div class="stat-label">Free</div><div class="stat-value">${free}</div></div>
+      <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-value">${failed}</div></div>
+    </div>
+    <div class="sec">All Transactions</div>
+    <div class="card"><div id="c-det-txns"></div></div>
+  `;
+  renderTxns('c-det-txns', txnsSnap);
+}
+
+function closeCEODetail() {
+  document.getElementById('c-shop-detail').style.display = 'none';
+  document.getElementById('c-shops-list-wrap').style.display = 'block';
+}
+
+let ceoPeriod = 'week';
+
+function setCEOPeriod(p, btn) {
+  ceoPeriod = p;
+  document.querySelectorAll('#c-analytics .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadCEOAnalytics();
+}
+
+function getPeriodDates(period) {
+  const now = new Date();
+  let from, to = now.toISOString().split('T')[0];
+  if (period === 'week') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    from = d.toISOString().split('T')[0];
+  } else if (period === 'month') {
+    from = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+  } else if (period === 'year') {
+    from = now.getFullYear()+'-01-01';
+  } else {
+    from = '2000-01-01';
+  }
+  return { from, to };
+}
+
+function periodLabel(period) {
+  const now = new Date();
+  if (period==='week') return 'Last 7 days';
+  if (period==='month') return now.toLocaleString('default',{month:'long'})+' '+now.getFullYear();
+  if (period==='year') return 'Year '+now.getFullYear();
+  return 'All time';
+}
+
+async function loadCEOAnalytics() {
+  const { from, to } = getPeriodDates(ceoPeriod);
+  document.getElementById('c-period-label').textContent = '📅 ' + periodLabel(ceoPeriod);
+
+  const [txnSnap, distSnap] = await Promise.all([
+    db.collection('transactions').where('date','>=',from).where('date','<=',to).get(),
+    db.collection('distributions').where('date','>=',from).where('date','<=',to).get()
+  ]);
+
+  let mtnSold=0, airtelSold=0, sale=0, swap=0, free=0, failed=0, rev=0;
+  const shopRev={}, shopSales={};
+
+  txnSnap.forEach(d => {
+    const t=d.data();
+    rev += Number(t.amount||0);
+    if(t.type==='sale') { sale++; if(t.network==='MTN') mtnSold+=t.quantity||1; else airtelSold+=t.quantity||1; }
+    if(t.type==='swap') swap++;
+    if(t.type==='free') free++;
+    if(t.type==='failed') failed++;
+    if(t.shopName) {
+      shopRev[t.shopName] = (shopRev[t.shopName]||0) + Number(t.amount||0);
+      shopSales[t.shopName] = (shopSales[t.shopName]||0) + 1;
+    }
+  });
+
+  let pickups=0, deliveries=0;
+  distSnap.forEach(d => {
+    const t=d.data();
+    if(t.type==='pickup') pickups+=t.quantity||0;
+    else deliveries+=t.quantity||0;
+  });
+
+  document.getElementById('c-p-revenue').textContent = '₦'+rev.toLocaleString();
+  document.getElementById('c-p-total').textContent = txnSnap.size;
+  document.getElementById('c-mtn-sold').textContent = mtnSold;
+  document.getElementById('c-airtel-sold').textContent = airtelSold;
+  document.getElementById('c-t-sale').textContent = sale;
+  document.getElementById('c-t-swap').textContent = swap;
+  document.getElementById('c-t-free').textContent = free;
+  document.getElementById('c-t-failed').textContent = failed;
+  document.getElementById('c-p-pickup').textContent = pickups;
+  document.getElementById('c-p-dist').textContent = deliveries;
+
+  // Revenue by shop
+  const revEl = document.getElementById('c-rev-by-shop');
+  const revEntries = Object.entries(shopRev).sort((a,b)=>b[1]-a[1]);
+  revEl.innerHTML = revEntries.length ? revEntries.map(([name,r],i) => `
+    <div class="list-item">
+      <div class="li-left"><div class="rank">${i+1}</div><div class="li-title">${name}</div></div>
+      <div class="li-val" style="color:var(--success)">₦${r.toLocaleString()}</div>
+    </div>`).join('')
+    : '<div class="empty"><div class="empty-text">No revenue data for this period</div></div>';
+
+  // Sales count by shop
+  const salesEl = document.getElementById('c-sales-by-shop');
+  const salesEntries = Object.entries(shopSales).sort((a,b)=>b[1]-a[1]);
+  salesEl.innerHTML = salesEntries.length ? salesEntries.map(([name,cnt],i) => `
+    <div class="list-item">
+      <div class="li-left"><div class="rank">${i+1}</div><div class="li-title">${name}</div></div>
+      <div class="li-val" style="color:var(--accent)">${cnt} <span style="font-size:11px;color:var(--muted);font-family:'DM Sans',sans-serif">txns</span></div>
+    </div>`).join('')
+    : '<div class="empty"><div class="empty-text">No sales for this period</div></div>';
+}
+
+// ═══════════════════
+// MANAGER LOGIC
+// ═══════════════════
+async function loadMgrHome() {
+  if (!UD?.shopId) return;
+  const sid = UD.shopId;
+
+  const [todaySnap, mtnDoc, airtelDoc] = await Promise.all([
+    db.collection('transactions').where('shopId','==',sid).where('date','==',today()).get(),
+    db.collection('stock').doc(sid+'_MTN').get(),
+    db.collection('stock').doc(sid+'_Airtel').get()
+  ]);
+
+  let qty=0, rev=0, swaps=0;
+  todaySnap.forEach(d => {
+    const t=d.data();
+    qty+=t.quantity||1;
+    rev+=Number(t.amount||0);
+    if(t.type==='swap') swaps++;
+  });
+
+  document.getElementById('m-today-sales').textContent = todaySnap.size;
+  document.getElementById('m-today-qty').textContent = qty;
+  document.getElementById('m-revenue').textContent = '₦'+rev.toLocaleString();
+  document.getElementById('m-swaps').textContent = swaps;
+
+  const mtnQ = mtnDoc.exists ? mtnDoc.data().quantity : 0;
+  const airtelQ = airtelDoc.exists ? airtelDoc.data().quantity : 0;
+  const mtnT = mtnDoc.exists ? (mtnDoc.data().lowStockThreshold||10) : 10;
+  const airtelT = airtelDoc.exists ? (airtelDoc.data().lowStockThreshold||10) : 10;
+
+  document.getElementById('m-mtn').textContent = mtnQ;
+  document.getElementById('m-airtel').textContent = airtelQ;
+
+  const alerts = [];
+  if (mtnQ <= mtnT) alerts.push(`MTN (${mtnQ} left)`);
+  if (airtelQ <= airtelT) alerts.push(`Airtel (${airtelQ} left)`);
+  document.getElementById('m-low-alert').innerHTML = alerts.length
+    ? `<div class="low-banner">⚠️ Low stock: ${alerts.join(', ')}</div>` : '';
+
+  const recentSnap = await db.collection('transactions')
+    .where('shopId','==',sid).orderBy('createdAt','desc').limit(10).get();
+  renderTxns('m-recent', recentSnap);
+}
+
+function selType(type, el) {
+  selTxnType = type;
+  document.querySelectorAll('.type-card').forEach(c => c.className='type-card');
+  el.classList.add('sel-'+type);
+  document.getElementById('r-amount-wrap').style.display = (type==='free'||type==='failed') ? 'none' : 'block';
+  clearAlert('r-error');
+}
+
+function selNet(net, el) {
+  selTxnNet = net;
+  document.querySelectorAll('.net-card').forEach(c => c.className='net-card');
+  el.classList.add('sel-'+net.toLowerCase());
+  clearAlert('r-error');
+}
+
+async function submitTxn() {
+  if (!selTxnType) { err('r-error','Select a transaction type.'); return; }
+  if (!selTxnNet) { err('r-error','Select a network.'); return; }
+
+  const cname = document.getElementById('r-cname').value.trim();
+  const cphone = document.getElementById('r-cphone').value.trim();
+  const qty = parseInt(document.getElementById('r-qty').value)||1;
+  const amount = Number(document.getElementById('r-amount').value)||0;
+  const notes = document.getElementById('r-notes').value.trim();
+
+  if (!cname) { err('r-error','Customer name is required.'); return; }
+
+  const sid = UD.shopId;
+
+  try {
+    await db.collection('transactions').add({
+      shopId: sid, shopName: UD.shopName,
+      staffId: CU.uid, staffName: UD.name,
+      type: selTxnType, network: selTxnNet,
+      quantity: qty, amount,
+      customerName: cname, customerPhone: cphone, notes,
+      date: today(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Deduct stock for sale, swap, free
+    if (['sale','swap','free'].includes(selTxnType)) {
+      const stockRef = db.collection('stock').doc(sid+'_'+selTxnNet);
+      await db.runTransaction(async t => {
+        const doc = await t.get(stockRef);
+        const cur = doc.exists ? (doc.data().quantity||0) : 0;
+        t.update(stockRef, { quantity: Math.max(0, cur-qty), lastUpdated: firebase.firestore.FieldValue.serverTimestamp() });
+      });
+    }
+
+    ok('r-success','✓ Transaction recorded!');
+    // Reset
+    selTxnType=null; selTxnNet=null;
+    document.querySelectorAll('.type-card').forEach(c => c.className='type-card');
+    document.querySelectorAll('.net-card').forEach(c => c.className='net-card');
+    ['r-cname','r-cphone','r-notes','r-amount'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('r-qty').value='1';
+    document.getElementById('r-amount-wrap').style.display='block';
+
+  } catch(e) {
+    err('r-error','Failed to save. Try again.');
+  }
+}
+
+async function loadMgrStock() {
+  const sid = UD?.shopId; if(!sid) return;
+  const [mtn, airtel] = await Promise.all([
+    db.collection('stock').doc(sid+'_MTN').get(),
+    db.collection('stock').doc(sid+'_Airtel').get()
+  ]);
+  const mQ = mtn.exists?mtn.data().quantity:0;
+  const aQ = airtel.exists?airtel.data().quantity:0;
+  document.getElementById('m-mtn-badge').textContent = mQ+' SIMs';
+  document.getElementById('m-airtel-badge').textContent = aQ+' SIMs';
+  document.getElementById('s-mtn').placeholder = 'Current: '+mQ;
+  document.getElementById('s-airtel').placeholder = 'Current: '+aQ;
+}
+
+async function setStock(net) {
+  const sid = UD?.shopId;
+  const val = parseInt(document.getElementById('s-'+net.toLowerCase()).value);
+  if (isNaN(val)||val<0) { alert('Enter a valid quantity.'); return; }
+  await db.collection('stock').doc(sid+'_'+net).update({
+    quantity: val, lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById('s-'+net.toLowerCase()).value='';
+  loadMgrStock(); loadMgrHome();
+}
+
+async function loadMgrCusts() {
+  const sid = UD?.shopId;
+  const snap = await db.collection('customers').where('shopId','==',sid).orderBy('createdAt','desc').get();
+  renderCusts(snap.docs);
+}
+
+function renderCusts(docs) {
+  const el = document.getElementById('m-cust-list');
+  if (!docs.length) { el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No customers yet</div></div>'; return; }
+  el.innerHTML = docs.map(doc => {
+    const d=doc.data();
+    return `<div class="list-item">
+      <div class="li-left">
+        <div class="li-icon" style="background:var(--surface2)">👤</div>
+        <div><div class="li-title">${d.name}</div><div class="li-sub">${d.phone||'No phone'}</div></div>
+      </div>
+      ${d.phone?`<a href="tel:${d.phone}" style="color:var(--accent);font-size:22px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function searchCusts() {
+  const q = document.getElementById('cust-search').value.toLowerCase();
+  const sid = UD?.shopId;
+  const snap = await db.collection('customers').where('shopId','==',sid).get();
+  const filtered = snap.docs.filter(doc => {
+    const d=doc.data();
+    return d.name?.toLowerCase().includes(q)||d.phone?.includes(q);
+  });
+  renderCusts(filtered);
+}
+
+async function addCust() {
+  const name = document.getElementById('c-name').value.trim();
+  const phone = document.getElementById('c-phone').value.trim();
+  const notes = document.getElementById('c-notes').value.trim();
+  if (!name) { alert('Name required.'); return; }
+  await db.collection('customers').add({
+    shopId: UD.shopId, shopName: UD.shopName,
+    name, phone, notes,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  closeModal('m-add-cust');
+  ['c-name','c-phone','c-notes'].forEach(id => document.getElementById(id).value='');
+  loadMgrCusts();
+}
+
+function initReportDates() {
+  const t = today();
+  document.getElementById('rep-to').value = t;
+  document.getElementById('rep-from').value = t.substring(0,8)+'01';
+}
+
+async function genReport() {
+  const from = document.getElementById('rep-from').value;
+  const to = document.getElementById('rep-to').value;
+  const sid = UD?.shopId;
+  if (!from||!to) { alert('Select a date range.'); return; }
+
+  const snap = await db.collection('transactions')
+    .where('shopId','==',sid)
+    .where('date','>=',from)
+    .where('date','<=',to)
+    .get();
+
+  let sale=0, swap=0, free=0, failed=0, rev=0, mtn=0, airtel=0, qty=0;
+  snap.forEach(d => {
+    const t=d.data();
+    if(t.type==='sale') sale++;
+    if(t.type==='swap') swap++;
+    if(t.type==='free') free++;
+    if(t.type==='failed') failed++;
+    if(t.network==='MTN') mtn++;
+    else airtel++;
+    rev+=Number(t.amount||0);
+    qty+=t.quantity||1;
+  });
+
+  document.getElementById('rep-out').innerHTML = `
+    <div class="card">
+      <div class="card-header"><div class="card-title">📊 ${from} → ${to}</div></div>
+      <div class="card-body">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Total Txns</div><div class="stat-value">${snap.size}</div></div>
+          <div class="stat-card c-success"><div class="stat-label">Revenue</div><div class="stat-value" style="font-size:18px">₦${rev.toLocaleString()}</div></div>
+          <div class="stat-card c-mtn"><div class="stat-label">MTN</div><div class="stat-value">${mtn}</div></div>
+          <div class="stat-card c-airtel"><div class="stat-label">Airtel</div><div class="stat-value">${airtel}</div></div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
+          <div>💰 Sales: <strong>${sale}</strong></div>
+          <div>🔄 Swaps: <strong>${swap}</strong></div>
+          <div>🎁 Free SIMs: <strong>${free}</strong></div>
+          <div>❌ Failed: <strong>${failed}</strong></div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:13px;color:var(--muted)">Total SIMs handled: <strong style="color:var(--text)">${qty}</strong></div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════
+// DISTRIBUTION LOGIC
+// ═══════════════════
+let selDistT = null, selDistP = null, selDistN = null;
+
+function selDistType(type, el) {
+  selDistT = type;
+  document.querySelectorAll('.type-card').forEach(c => c.className='type-card');
+  el.classList.add('sel-' + (type==='pickup'?'free':type==='internal'?'swap':'sale'));
+  document.getElementById('dist-internal-wrap').style.display = type==='internal' ? 'block' : 'none';
+  document.getElementById('dist-external-wrap').style.display = type==='external' ? 'block' : 'none';
+  document.getElementById('dist-pickup-wrap').style.display = type==='pickup' ? 'block' : 'none';
+  if (type==='internal') fillDistManagers();
+}
+
+function selDistProduct(p, el) {
+  selDistP = p;
+  document.querySelectorAll('.net-card').forEach(c => {
+    if (c.textContent.includes('SIM') || c.textContent.includes('MiFi') || c.textContent.includes('Router')) c.className='net-card';
+  });
+  el.classList.add('sel-mtn');
+}
+
+function selDistNet(n, el) {
+  selDistN = n;
+  // Only toggle the MTN/Airtel net cards
+  document.querySelectorAll('.net-card').forEach(c => {
+    if (c.textContent.includes('MTN') || c.textContent.includes('Airtel')) {
+      c.className = 'net-card';
+    }
+  });
+  el.classList.add('sel-' + n.toLowerCase());
+}
+
+async function fillDistManagers() {
+  const snap = await db.collection('users').where('role','==','manager').get();
+  const sel = document.getElementById('dist-manager');
+  sel.innerHTML = '<option value="">— Select Manager —</option>';
+  snap.forEach(doc => {
+    const d = doc.data();
+    sel.innerHTML += `<option value="${doc.id}" data-name="${d.name}" data-shop="${d.shopName||''}">${d.name} — ${d.shopName||'No shop'}</option>`;
+  });
+}
+
+async function submitDist() {
+  if (!selDistT) { err('m-dist-err','Select an action type.'); return; }
+  if (!selDistP) { err('m-dist-err','Select a product type.'); return; }
+  if (!selDistN) { err('m-dist-err','Select a network.'); return; }
+  const qty = parseInt(document.getElementById('dist-qty').value)||0;
+  if (!qty||qty<1) { err('m-dist-err','Enter a valid quantity.'); return; }
+
+  let recipientName='', recipientPhone='', recipientShopId='', source='';
+
+  if (selDistT==='internal') {
+    const sel = document.getElementById('dist-manager');
+    recipientShopId = sel.value;
+    const opt = sel.options[sel.selectedIndex];
+    recipientName = opt ? opt.getAttribute('data-name')||'' : '';
+    if (!recipientShopId) { err('m-dist-err','Select a manager.'); return; }
+  }
+  if (selDistT==='external') {
+    recipientName = document.getElementById('dist-retailer-name').value.trim();
+    recipientPhone = document.getElementById('dist-retailer-phone').value.trim();
+    if (!recipientName) { err('m-dist-err','Enter retailer name.'); return; }
+  }
+  if (selDistT==='pickup') {
+    source = document.getElementById('dist-source').value.trim();
+  }
+
+  const notes = document.getElementById('dist-notes').value.trim();
+
+  await db.collection('distributions').add({
+    type: selDistT,
+    productType: selDistP,
+    network: selDistN,
+    quantity: qty,
+    recipientName, recipientPhone, recipientShopId, source, notes,
+    staffId: CU.uid, staffName: UD.name,
+    date: today(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  ok('m-dist-ok', '✓ Distribution recorded!');
+  selDistT=null; selDistP=null; selDistN=null;
+  document.querySelectorAll('#m-dist .type-card').forEach(c=>c.className='type-card');
+  document.querySelectorAll('#m-dist .net-card').forEach(c=>c.className='net-card');
+  ['dist-qty','dist-retailer-name','dist-retailer-phone','dist-source','dist-notes'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['dist-internal-wrap','dist-external-wrap','dist-pickup-wrap'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  loadDistribution();
+}
+
+async function loadDistribution() {
+  const snap = await db.collection('distributions').orderBy('createdAt','desc').get();
+  const todayStr = today();
+
+  let pickupToday=0, deliveredToday=0, toMgr=0, toRetailer=0;
+  snap.forEach(doc => {
+    const d=doc.data();
+    if (d.date===todayStr) {
+      if (d.type==='pickup') pickupToday+=d.quantity||0;
+      else deliveredToday+=d.quantity||0;
+    }
+    if (d.type==='internal') toMgr++;
+    if (d.type==='external') toRetailer++;
+  });
+
+  document.getElementById('d-pickup-today').textContent = pickupToday;
+  document.getElementById('d-delivered-today').textContent = deliveredToday;
+  document.getElementById('d-to-managers').textContent = toMgr;
+  document.getElementById('d-to-retailers').textContent = toRetailer;
+
+  const el = document.getElementById('d-history');
+  if (snap.empty) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🚚</div><div class="empty-text">No distribution records yet</div></div>';
+    return;
+  }
+
+  const icons = {pickup:'📦',internal:'🏪',external:'🤝'};
+  const labels = {pickup:'Stock Pickup',internal:'To Manager',external:'To Retailer'};
+  el.innerHTML = snap.docs.map(doc => {
+    const d=doc.data();
+    const who = d.type==='pickup' ? (d.source||'Store') : d.recipientName||'—';
+    return `<div class="list-item">
+      <div class="li-left">
+        <div class="li-icon" style="background:var(--surface2)">${icons[d.type]||'📦'}</div>
+        <div>
+          <div class="li-title">${labels[d.type]||d.type} — ${d.productType} (${d.network})</div>
+          <div class="li-sub">${who} · ${d.date||''}</div>
+        </div>
+      </div>
+      <div class="li-right">
+        <div class="li-val" style="color:var(--accent)">${d.quantity}</div>
+        <div class="li-label">units</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Update CEO overview to include distribution
+const _origLoadCEOOverview = loadCEOOverview;
+loadCEOOverview = async function() {
+  await _origLoadCEOOverview();
+  // Load distribution data for CEO
+  try {
+    const distSnap = await db.collection('distributions').get();
+    let total=0, ext=0;
+    distSnap.forEach(doc => {
+      const d=doc.data();
+      total += d.quantity||0;
+      if (d.type==='external') ext++;
+    });
+    document.getElementById('c-dist-total').textContent = total;
+    document.getElementById('c-dist-ext').textContent = ext;
+
+    const recentSnap = await db.collection('distributions').orderBy('createdAt','desc').limit(5).get();
+    const icons = {pickup:'📦',internal:'🏪',external:'🤝'};
+    const labels = {pickup:'Stock Pickup',internal:'To Manager',external:'To Retailer'};
+    const el = document.getElementById('c-dist-recent');
+    if (recentSnap.empty) {
+      el.innerHTML = '<div class="empty"><div class="empty-text">No distributions yet</div></div>';
+    } else {
+      el.innerHTML = recentSnap.docs.map(doc => {
+        const d=doc.data();
+        const who = d.type==='pickup' ? (d.source||'Store') : d.recipientName||'—';
+        return `<div class="list-item">
+          <div class="li-left">
+            <div class="li-icon" style="background:var(--surface2)">${icons[d.type]||'📦'}</div>
+            <div>
+              <div class="li-title">${labels[d.type]} — ${d.productType} (${d.network})</div>
+              <div class="li-sub">${who} · ${d.staffName||''} · ${d.date||''}</div>
+            </div>
+          </div>
+          <div class="li-right">
+            <div class="li-val" style="color:var(--accent)">${d.quantity}</div>
+            <div class="li-label">units</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) { console.log('Dist load error:', e); }
+};
+
+</script>
+</body>
+</html>
